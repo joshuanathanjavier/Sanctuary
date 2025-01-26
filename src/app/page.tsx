@@ -4,12 +4,15 @@ import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Facebook, Instagram, Twitter, Linkedin, Sun, Music, Users, Heart } from "lucide-react"
+import SeeMoreParagraph from "@/components/SeeMoreParagraph"
 
 export default function SanctuaryHome() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeSlide, setActiveSlide] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const argao = "Argao Psych, the largest private mental health center in Central Luzon, has teamed up with the Sanctuary App to bring expert mental health support directly to your fingertips. Known for their innovative in-clinic and online services, Argao Psych helps shape Sanctuary's features to provide users with tools and resources rooted in real mental health care expertise. With this partnership, Sanctuary users can access thoughtfully designed relaxation programs and wellness tools inspired by Argao Psych's years of experience in counseling, assessments, and workplace wellness. Together, we're creating a platform that truly supports mental well-being, making professional care more accessible and relevant for Filipinos."
+  const goddame = "Goddame!3013, a Filipino songwriter and rap artist from Norzagaray, Bulacan, has partnered with the Sanctuary App to contribute original soundscapes and music that enhance the app's relaxationexperience. Through this collaboration, Goddame! provides calming instrumental tracks and soothinglyrical compositions, aligning with the app's mission to deliver curated soundscapes for stress reliefand mental well-being. This partnership brings a unique blend of artistry and therapeutic value,enriching the app's offerings with culturally resonant and emotionally uplifting audio content."
 
   const slides = [
     {
@@ -56,6 +59,8 @@ export default function SanctuaryHome() {
     },
   ]
 
+    
+
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveSlide((prevSlide) => (prevSlide + 1) % slides.length)
@@ -89,7 +94,7 @@ export default function SanctuaryHome() {
       >
         <nav className="flex items-center justify-between max-w-6xl mx-auto py-4">
           <Link href="/" className="text-2xl font-bold">
-            <Image src="/images/logo-v2.png" alt="Sanctuary Logo" width={120} height={40} />
+            <Image src="/images/logo-v2.png" alt="Sanctuary Logo" width={80} height={40} />
           </Link>
           <div className="hidden md:flex space-x-6">
             <Link href="#homepage" className={`${isScrolled ? "hover:text-green-500" : "hover:text-green-500"}`}>
@@ -195,32 +200,6 @@ export default function SanctuaryHome() {
                 className={`w-3 h-3 rounded-full ${index === activeSlide ? "bg-white" : "bg-white bg-opacity-50"}`}
               />
             ))}
-          </div>
-          <div className="absolute right-10 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4">
-            <a
-              href="https://www.facebook.com/profile.php?id=61565691582856"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:text-green-500 transition duration-300"
-            >
-              <Facebook size={24} />
-            </a>
-            <a
-              href="https://x.com/SanctuaryRelax?t=4jsvYk5SsXxLgcT0d4apTA&s=09"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:text-green-500 transition duration-300"
-            >
-              <Instagram size={24} />
-            </a>
-            <a
-              href="https://www.instagram.com/immugii?igsh=MXg0bWpxMWVqbHVvYg=="
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:text-green-500 transition duration-300"
-            >
-              <Twitter size={24} />
-            </a>
           </div>
         </section>
 
@@ -372,7 +351,6 @@ export default function SanctuaryHome() {
 
         <section id="partners" className="bg-[#edf2f7] text-gray-800 py-16 min-h-screen relative">
         <br/>
-        <br/>
           <div className="absolute top-0 left-0 w-full z-10 transform rotate-180">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -426,16 +404,9 @@ export default function SanctuaryHome() {
                   className="mb-12 md:mb-20 mt-8 md:mt-12"
                 />
                 <h3 className="font-bold text-xl text-green-500 mb-8 md:mb-12">Argao Psych</h3>
-                <p className="text-justify text-gray-700 mx-4 md:mx-12">
-                  Argao Psych, the largest private mental health center in Central Luzon, has teamed up with the
-                  Sanctuary App to bring expert mental health support directly to your fingertips. Known for their
-                  innovative in-clinic and online services, Argao Psych helps shape Sanctuary's features to provide
-                  users with tools and resources rooted in real mental health care expertise. With this partnership,
-                  Sanctuary users can access thoughtfully designed relaxation programs and wellness tools inspired by
-                  Argao Psych's years of experience in counseling, assessments, and workplace wellness. Together, we're
-                  creating a platform that truly supports mental well-being, making professional care more accessible
-                  and relevant for Filipinos.
-                </p>
+                <div className="text-justify text-gray-700 mx-4 md:mx-12">
+                <SeeMoreParagraph text={argao} maxlength={250}/>
+                </div>
                 <div className="flex flex-col items-center mt-8 md:mt-11">
                   <a
                     href="https://argaopsych.com/"
@@ -492,14 +463,9 @@ export default function SanctuaryHome() {
                   className="rounded-full mb-5"
                 />
                 <h3 className="font-bold text-xl text-green-500 mb-8 md:mb-12">Goddame!3013</h3>
-                <p className="text-justify text-gray-700 mx-4 md:mx-12">
-                  Goddame!3013, a Filipino songwriter and rap artist from Norzagaray, Bulacan, has partnered with the
-                  Sanctuary App to contribute original soundscapes and music that enhance the app's relaxation
-                  experience. Through this collaboration, Goddame! provides calming instrumental tracks and soothing
-                  lyrical compositions, aligning with the app's mission to deliver curated soundscapes for stress relief
-                  and mental well-being. This partnership brings a unique blend of artistry and therapeutic value,
-                  enriching the app's offerings with culturally resonant and emotionally uplifting audio content.
-                </p>
+                <div className="text-justify text-gray-700 mx-4 md:mx-12">
+                  <SeeMoreParagraph text={goddame} maxlength={120}/>
+                </div>
                 <div className="flex flex-col items-center mt-16 md:mt-28 mb-4 md:mb-6">
                   <a
                     href="https://www.youtube.com/@goddame3013"
@@ -703,11 +669,11 @@ export default function SanctuaryHome() {
         <div className="max-w-6xl mx-auto px-4 flex flex-col items-center">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-center">
             <div className="text-left px-4 md:px-8">
-              <p className="mb-4">
+              <p className="mb-4 text-center">
                 Sanctuary is your trusted companion for stress relief and relaxation. Immerse yourself in curated
                 soundscapes designed to enhance focus, promote calm, and uplift your well-being.
               </p>
-              <div className="flex justify-left space-x-6">
+              <div className="flex justify-center space-x-6">
                 <a
                   href="https://www.facebook.com/profile.php?id=61565691582856"
                   target="_blank"

@@ -584,7 +584,7 @@ export default function EnhancedMusicPlayer() {
                       )}
                       <div>
                         <p className="font-medium">Email:</p>
-                        <p>{userEmail}</p>
+                        <p className="overflow-hidden">{userEmail}</p>
                       </div>
                     </div>
                   </div>
@@ -706,7 +706,7 @@ export default function EnhancedMusicPlayer() {
             </div>
 
             <Tabs defaultValue="allSongs" className="w-full flex-1 flex flex-col overflow-hidden">
-              <TabsList className={`grid w-full grid-cols-3 mb-4 ${theme.secondary}`}>
+              <TabsList className={`grid w-full grid-cols-3 mb-4 ${theme.secondary} ${theme.text}`}>
                 <TabsTrigger value="allSongs" className={`data-[state=active]:${theme.primary}`}>
                   All Songs
                 </TabsTrigger>

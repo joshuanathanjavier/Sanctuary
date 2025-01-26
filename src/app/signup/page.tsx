@@ -10,10 +10,12 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from 'next/image'
+import { Eye, EyeOff } from "lucide-react"
 
 export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isView, setIsView] = useState(false)
   const [otp, setOtp] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -134,18 +136,26 @@ export default function Signup() {
               disabled={isOtpSent}
             />
           </div>
-          <div className='space-y-2'>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isOtpSent}
-            />
-          </div>
+            <div className="space-y-2 relative">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={isView ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isOtpSent}
+                />
+                <div
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 cursor-pointer"
+                  onClick={() => setIsView(!isView)}
+                >
+                  {isView ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </div>
+              </div>
+            </div>
           {isOtpSent && (
             <div>
               <Label htmlFor="otp">OTP</Label>
