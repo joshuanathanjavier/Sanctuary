@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Search } from "lucide-react"
 import type { Track } from "@/types"
 
 export function TrackList() {
@@ -14,6 +16,7 @@ export function TrackList() {
   const [optimisticTracks, addOptimisticTrack] = useOptimistic(tracks, (state, deletedId: string) =>
     state.filter((track) => track.id !== deletedId),
   )
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -36,10 +39,26 @@ export function TrackList() {
     })
   }
 
+  const filteredTracks = optimisticTracks.filter(
+    (track) =>
+      track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.genre.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
   return (
     <Card className="w-full max-w-[95vw] mx-auto sm:max-w-none">
       <CardHeader>
         <CardTitle>Sound Tracks</CardTitle>
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search tracks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       </CardHeader>
       <CardContent className="p-0 sm:p-6">
         <div className="overflow-x-auto">
@@ -54,7 +73,7 @@ export function TrackList() {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-200">
-              {optimisticTracks.map((track) => (
+              {filteredTracks.map((track) => (
                 <TableRow key={track.id} className="flex flex-col sm:table-row">
                   <TableCell className="font-medium py-2 sm:py-4">
                     {track.title}

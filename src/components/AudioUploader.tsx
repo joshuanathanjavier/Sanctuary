@@ -122,6 +122,9 @@ export function AudioUploader() {
               </div>
             )}
           </div>
+          <p className="text-sm text-muted-foreground">
+            Do not forget to add track to save it.
+          </p>
           <Button type="submit" disabled={!uploadedFileUrl || !title || !artist || !genre} className="w-full">
             <Upload className="w-4 h-4 mr-2" />
             Add Track
