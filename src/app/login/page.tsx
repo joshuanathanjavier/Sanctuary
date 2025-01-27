@@ -1,21 +1,21 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import Image from 'next/image'
-import { Eye, EyeOff } from 'lucide-react'
+import Image from "next/image"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isView, setIsView] = useState(false);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isView, setIsView] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null)
@@ -23,9 +23,9 @@ export default function Login() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
-    const verified = urlParams.get('verified')
-    if (verified === 'true') {
-      setVerificationMessage('Your account has been verified. You can now log in.')
+    const verified = urlParams.get("verified")
+    if (verified === "true") {
+      setVerificationMessage("Your account has been verified. You can now log in.")
     }
   }, [])
 
@@ -46,26 +46,29 @@ export default function Login() {
 
       if (data.user) {
         const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
           .single()
 
         if (profileError) {
-          throw new Error('Error fetching user profile')
+          throw new Error("Error fetching user profile")
         }
 
-        if (profile.role === 'admin') {
-          router.push('/admin')
+        // Set a flag in localStorage to indicate a new login
+        localStorage.setItem("newLogin", "true")
+
+        if (profile.role === "admin") {
+          router.push("/admin")
         } else {
-          router.push('/player')
+          router.push("/player")
         }
       }
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message)
       } else {
-        setError('An unexpected error occurred')
+        setError("An unexpected error occurred")
       }
     } finally {
       setIsLoading(false)
@@ -74,19 +77,20 @@ export default function Login() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-logUP bg-cover bg-center bg-no-repeat bg-fixed">
-      <header className="absolute top-5">
-          <div className="m-auto">
-            <Link href="/">
-              <Image
+      <header className="absolute top-20">
+        <br />
+        <div className="m-auto">
+          <Link href="/">
+            <Image
               src="/images/text-logo.webp"
               alt="Logo"
               width={220}
               height={40}
               className="object-contain"
               objectFit="cover"
-              />
-            </Link>
-          </div>
+            />
+          </Link>
+        </div>
       </header>
       <Card className="w-full max-w-md">
         <CardHeader>
@@ -138,13 +142,16 @@ export default function Login() {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Log in'}
+              {isLoading ? "Logging in..." : "Log in"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <p className="text-sm text-center">
-            Don't have an account? <Link href="/signup" className="text-blue-600 hover:underline">Sign up</Link>
+            Don't have an account?{" "}
+            <Link href="/signup" className="text-blue-600 hover:underline">
+              Sign up
+            </Link>
           </p>
         </CardFooter>
       </Card>

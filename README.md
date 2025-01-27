@@ -1,1 +1,1 @@
-# Sanctuary
+<h1 align="center">$$\color{a3ffbc}This is Sanctuary Repository!$$</h1>

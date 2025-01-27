@@ -91,7 +91,8 @@ export default function Signup() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-logUP bg-cover bg-center bg-no-repeat bg-fixed">
-      <header className="absolute top-5">
+      <header className="absolute top-20">
+        <br />
           <div className="m-auto">
             <Link href="/">
               <Image

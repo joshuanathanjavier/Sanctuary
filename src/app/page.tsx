@@ -753,6 +753,11 @@ export default function SanctuaryHome() {
               </a>
             </p>
           </div>
+          <div>
+            <p className="mt-4 text-center text-sm text-gray-400">
+              &copy; {new Date().getFullYear()} Sanctuary. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

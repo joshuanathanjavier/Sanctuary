@@ -166,9 +166,11 @@ export default function EnhancedMusicPlayer() {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (user) {
-        setUserEmail(user.email || 'No email available')
+        setUserEmail(user.email || "No email available")
       }
     }
 
@@ -214,11 +216,35 @@ export default function EnhancedMusicPlayer() {
     if (dassScores.depression > 0 || dassScores.anxiety > 0 || dassScores.stress > 0) {
       recommendSongs()
     }
-  }, [dassScores])
+  }, [dassScores, tracks])
 
   useEffect(() => {
-    setShowDASS21Modal(true)
+    const checkAndShowDASS21Modal = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const newLogin = localStorage.getItem('newLogin')
+
+      if (session && newLogin === 'true') {
+        setShowDASS21Modal(true)
+        localStorage.removeItem('newLogin') // Remove the flag after showing the modal
+      } else {
+        loadDassScores() // Load saved scores if not a new login
+      }
+    }
+
+    checkAndShowDASS21Modal()
   }, [])
+
+  useEffect(() => {
+    const savedContentDensity = localStorage.getItem('contentDensity') as "compact" | "comfortable" | null;
+    const savedTheme = localStorage.getItem('currentTheme') as keyof typeof themes | null;
+    
+    if (savedContentDensity) {
+      setContentDensity(savedContentDensity);
+    }
+    if (savedTheme) {
+      setCurrentTheme(savedTheme);
+    }
+  }, []);
 
   const togglePlay = () => {
     if (currentSong && !isLoading) {
@@ -295,17 +321,28 @@ export default function EnhancedMusicPlayer() {
 
   const handleLogout = async () => {
     await logout()
+    localStorage.removeItem('lastLoginTime')
     router.push("/login")
   }
 
   const handleDASS21Submit = (scores: { depression: number; anxiety: number; stress: number }) => {
     setDassScores(scores)
+    localStorage.setItem('dassScores', JSON.stringify(scores))
     setShowDASS21Modal(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   const handleCloseDASS21Modal = () => {
     setShowDASS21Modal(false)
+  }
+
+  const loadDassScores = () => {
+    const savedScores = localStorage.getItem('dassScores')
+    if (savedScores) {
+      const scores = JSON.parse(savedScores)
+      setDassScores(scores)
+      recommendSongs(scores)
+    }
   }
 
   const calculateOverallDASS = () => {
@@ -354,10 +391,10 @@ export default function EnhancedMusicPlayer() {
     return ranges[type].find((range) => value <= range.max)?.label || "Unknown"
   }
 
-  const recommendSongs = () => {
-    const depressionSeverity = getSeverityLabel(dassScores.depression, "depression") as SeverityLevel
-    const anxietySeverity = getSeverityLabel(dassScores.anxiety, "anxiety") as SeverityLevel
-    const stressSeverity = getSeverityLabel(dassScores.stress, "stress") as SeverityLevel
+  const recommendSongs = (scores = dassScores) => {
+    const depressionSeverity = getSeverityLabel(scores.depression, "depression") as SeverityLevel
+    const anxietySeverity = getSeverityLabel(scores.anxiety, "anxiety") as SeverityLevel
+    const stressSeverity = getSeverityLabel(scores.stress, "stress") as SeverityLevel
 
     const recommendedGenres = recommendGenres(depressionSeverity, anxietySeverity, stressSeverity)
 
@@ -436,6 +473,16 @@ export default function EnhancedMusicPlayer() {
     }
     return 100 // If the value is higher than the maximum in the ranges
   }
+
+  const handleContentDensityChange = (value: "compact" | "comfortable") => {
+    setContentDensity(value);
+    localStorage.setItem('contentDensity', value);
+  };
+
+  const handleThemeChange = (value: keyof typeof themes) => {
+    setCurrentTheme(value);
+    localStorage.setItem('currentTheme', value);
+  };
 
   const theme = themes[currentTheme]
 
@@ -608,7 +655,7 @@ export default function EnhancedMusicPlayer() {
                     </label>
                     <Select
                       value={contentDensity}
-                      onValueChange={(value: "compact" | "comfortable") => setContentDensity(value)}
+                      onValueChange={handleContentDensityChange}
                     >
                       <SelectTrigger id="content-density" className={`${theme.primary} ${theme.text}`}>
                         <SelectValue placeholder="Select density" />
@@ -623,7 +670,7 @@ export default function EnhancedMusicPlayer() {
                     <label htmlFor="theme" className="block text-sm font-medium mb-1">
                       Theme
                     </label>
-                    <Select value={currentTheme} onValueChange={(value: keyof typeof themes) => setCurrentTheme(value)}>
+                    <Select value={currentTheme} onValueChange={handleThemeChange}>
                       <SelectTrigger id="theme" className={`${theme.primary} ${theme.text}`}>
                         <SelectValue placeholder="Select theme" />
                       </SelectTrigger>
@@ -735,8 +782,7 @@ export default function EnhancedMusicPlayer() {
                             {currentSong?.id === track.id && isPlaying ? (
                               <Pause className="h-4 w-4" />
                             ) : (
-                              <Play className="h-4 w-4" />
-                            )}
+                              <Play className="h-4 w-4" />                            )}
                           </Button>
                           <div>
                             <p className="font-medium text-sm md:text-base">{track.title}</p>
@@ -774,7 +820,8 @@ export default function EnhancedMusicPlayer() {
                             {currentSong?.id === track.id && isPlaying ? (
                               <Pause className="h-4 w-4" />
                             ) : (
-                              <Play className="h-4 w-4" />                           )}
+                              <Play className="h-4 w-4" />
+                            )}
                           </Button>
                           <div>
                             <p className="font-medium text-sm md:text-base">{track.title}</p>
