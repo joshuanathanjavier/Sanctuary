@@ -94,7 +94,7 @@ export default function SanctuaryHome() {
       >
         <nav className="flex items-center justify-between max-w-6xl mx-auto py-4">
           <Link href="/" className="text-2xl font-bold">
-            <Image src="/images/logo-v2.png" alt="Sanctuary Logo" width={80} height={40} />
+            <Image src="/images/logo.webp" alt="Sanctuary Logo" width={80} height={40} />
           </Link>
           <div className="hidden md:flex space-x-6">
             <Link href="#homepage" className={`${isScrolled ? "hover:text-green-500" : "hover:text-green-500"}`}>
@@ -284,9 +284,8 @@ export default function SanctuaryHome() {
           </div>
         </section>
 
-        <section className="relative flex-grow mx-auto px-8 py-12 pt-32 bg-[#edf2f7] min-h-screen" id="how-it-works">
-          <div className="absolute top-0 left-0 w-full h-[28vh]">
-            <img src="/images/ocean.jpeg" alt="Ocean Waves" className="w-full h-full object-cover" />
+        <section className="relative flex-grow mx-auto px-8 py-12 pt-15 bg-[#edf2f7] min-h-screen" id="how-it-works">
+          <div className="absolute top-0 left-0 w-full h-[15vh]">
             <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#edf2f7] to-transparent"></div>
           </div>
 

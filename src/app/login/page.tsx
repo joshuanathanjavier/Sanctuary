@@ -78,7 +78,7 @@ export default function Login() {
           <div className="m-auto">
             <Link href="/">
               <Image
-              src="/images/text-logo.png"
+              src="/images/text-logo.webp"
               alt="Logo"
               width={220}
               height={40}

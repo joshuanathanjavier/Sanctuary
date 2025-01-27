@@ -450,7 +450,7 @@ export default function EnhancedMusicPlayer() {
         >
           <div className="m-auto">
             <Image
-              src="/images/logo-with-text-logo.png"
+              src="/images/logo-with-text-logo.webp"
               alt="Logo"
               width={150}
               height={40}
