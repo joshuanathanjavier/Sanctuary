@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts"
 import DASS21Modal from "./DASS21Modal"
-import { logout } from "@/lib/actions"
 import { getTracks } from "@/lib/actions"
 import { supabase } from "@/lib/supabase"
 import type { Track } from "@/types"
@@ -20,6 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { BarChart } from "lucide-react"
 import { recommendGenres } from "@/utils/recommendGenre"
 import "@/styles/custom-scrollbar.css"
+import { getSessionAndProfile } from "@/utils/sessionManager"
 
 type SeverityLevel = "Normal" | "Mild" | "Moderate" | "Severe" | "Extremely Severe"
 
@@ -134,6 +134,14 @@ const sortTracksByTitle = (tracks: Track[]) => {
   return [...tracks].sort((a, b) => a.title.localeCompare(b.title))
 }
 
+const hasSevenDaysPassed = (lastAnswerDate: string) => {
+  const lastDate = new Date(lastAnswerDate)
+  const currentDate = new Date()
+  const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays >= 7
+}
+
 export default function EnhancedMusicPlayer() {
   const [currentSong, setCurrentSong] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -157,12 +165,30 @@ export default function EnhancedMusicPlayer() {
   const router = useRouter()
 
   useEffect(() => {
-    const fetchTracks = async () => {
-      const fetchedTracks = await getTracks()
-      setTracks(sortTracksByTitle(fetchedTracks))
+    const fetchData = async () => {
+      try {
+        const fetchedTracks = await getTracks()
+        setTracks(sortTracksByTitle(fetchedTracks))
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        // Handle the error appropriately, e.g., show an error message to the user
+      }
     }
-    fetchTracks()
+    fetchData()
   }, [])
+
+  useEffect(() => {
+    const checkUserAccess = async () => {
+      const { session, profile } = await getSessionAndProfile()
+      if (!session) {
+        router.push("/login")
+      } else if (profile?.role === "admin") {
+        router.push("/admin")
+      }
+    }
+    checkUserAccess()
+  }, [router])
+
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -220,14 +246,19 @@ export default function EnhancedMusicPlayer() {
 
   useEffect(() => {
     const checkAndShowDASS21Modal = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const newLogin = localStorage.getItem('newLogin')
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const newLogin = localStorage.getItem("newLogin")
+      const lastAnswerDate = localStorage.getItem("lastDASS21AnswerDate")
 
-      if (session && newLogin === 'true') {
+      if (session && newLogin === "true") {
         setShowDASS21Modal(true)
-        localStorage.removeItem('newLogin') // Remove the flag after showing the modal
+        localStorage.removeItem("newLogin") // Remove the flag after showing the modal
+      } else if (lastAnswerDate && hasSevenDaysPassed(lastAnswerDate)) {
+        setShowDASS21Modal(true)
       } else {
-        loadDassScores() // Load saved scores if not a new login
+        loadDassScores() // Load saved scores if not a new login and 7 days haven't passed
       }
     }
 
@@ -235,16 +266,31 @@ export default function EnhancedMusicPlayer() {
   }, [])
 
   useEffect(() => {
-    const savedContentDensity = localStorage.getItem('contentDensity') as "compact" | "comfortable" | null;
-    const savedTheme = localStorage.getItem('currentTheme') as keyof typeof themes | null;
-    
+    const savedContentDensity = localStorage.getItem("contentDensity") as "compact" | "comfortable" | null
+    const savedTheme = localStorage.getItem("currentTheme") as keyof typeof themes | null
+
     if (savedContentDensity) {
-      setContentDensity(savedContentDensity);
+      setContentDensity(savedContentDensity)
     }
     if (savedTheme) {
-      setCurrentTheme(savedTheme);
+      setCurrentTheme(savedTheme)
     }
-  }, []);
+  }, [])
+
+  useEffect(() => {
+    const savedLikedSongs = localStorage.getItem("likedSongs")
+    if (savedLikedSongs) {
+      setLikedSongs(JSON.parse(savedLikedSongs))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tracks.length > 0) {
+      const updatedLikedSongs = likedSongs.filter((likedSong) => tracks.some((track) => track.id === likedSong.id))
+      setLikedSongs(updatedLikedSongs)
+      localStorage.setItem("likedSongs", JSON.stringify(updatedLikedSongs))
+    }
+  }, [tracks])
 
   const togglePlay = () => {
     if (currentSong && !isLoading) {
@@ -296,12 +342,6 @@ export default function EnhancedMusicPlayer() {
     }
   }
 
-  const toggleLike = (track: Track) => {
-    const isLiked = likedSongs.some((s) => s.id === track.id)
-    const newLikedSongs = isLiked ? likedSongs.filter((s) => s.id !== track.id) : [...likedSongs, track]
-    setLikedSongs(newLikedSongs)
-  }
-
   const filteredTracks = sortTracksByTitle(tracks).filter(
     (track) =>
       (selectedGenre === "All" || track.genre === selectedGenre) &&
@@ -320,14 +360,19 @@ export default function EnhancedMusicPlayer() {
   }
 
   const handleLogout = async () => {
-    await logout()
-    localStorage.removeItem('lastLoginTime')
-    router.push("/login")
+    try {
+      await supabase.auth.signOut()
+      router.push("/login")
+    } catch (error) {
+      console.error("Error during logout:", error)
+      // Optionally, show an error message to the user
+    }
   }
 
   const handleDASS21Submit = (scores: { depression: number; anxiety: number; stress: number }) => {
     setDassScores(scores)
-    localStorage.setItem('dassScores', JSON.stringify(scores))
+    localStorage.setItem("dassScores", JSON.stringify(scores))
+    localStorage.setItem("lastDASS21AnswerDate", new Date().toISOString())
     setShowDASS21Modal(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -337,7 +382,7 @@ export default function EnhancedMusicPlayer() {
   }
 
   const loadDassScores = () => {
-    const savedScores = localStorage.getItem('dassScores')
+    const savedScores = localStorage.getItem("dassScores")
     if (savedScores) {
       const scores = JSON.parse(savedScores)
       setDassScores(scores)
@@ -475,14 +520,26 @@ export default function EnhancedMusicPlayer() {
   }
 
   const handleContentDensityChange = (value: "compact" | "comfortable") => {
-    setContentDensity(value);
-    localStorage.setItem('contentDensity', value);
-  };
+    setContentDensity(value)
+    localStorage.setItem("contentDensity", value)
+  }
 
   const handleThemeChange = (value: keyof typeof themes) => {
-    setCurrentTheme(value);
-    localStorage.setItem('currentTheme', value);
-  };
+    setCurrentTheme(value)
+    localStorage.setItem("currentTheme", value)
+  }
+
+  const toggleLike = (track: Track) => {
+    const isLiked = likedSongs.some((likedSong) => likedSong.id === track.id)
+    let updatedLikedSongs
+    if (isLiked) {
+      updatedLikedSongs = likedSongs.filter((likedSong) => likedSong.id !== track.id)
+    } else {
+      updatedLikedSongs = [...likedSongs, track]
+    }
+    setLikedSongs(updatedLikedSongs)
+    localStorage.setItem("likedSongs", JSON.stringify(updatedLikedSongs))
+  }
 
   const theme = themes[currentTheme]
 
@@ -653,10 +710,7 @@ export default function EnhancedMusicPlayer() {
                     <label htmlFor="content-density" className="block text-sm font-medium mb-1">
                       Layout
                     </label>
-                    <Select
-                      value={contentDensity}
-                      onValueChange={handleContentDensityChange}
-                    >
+                    <Select value={contentDensity} onValueChange={handleContentDensityChange}>
                       <SelectTrigger id="content-density" className={`${theme.primary} ${theme.text}`}>
                         <SelectValue placeholder="Select density" />
                       </SelectTrigger>
@@ -782,7 +836,8 @@ export default function EnhancedMusicPlayer() {
                             {currentSong?.id === track.id && isPlaying ? (
                               <Pause className="h-4 w-4" />
                             ) : (
-                              <Play className="h-4 w-4" />                            )}
+                              <Play className="h-4 w-4" />
+                            )}
                           </Button>
                           <div>
                             <p className="font-medium text-sm md:text-base">{track.title}</p>
@@ -794,7 +849,7 @@ export default function EnhancedMusicPlayer() {
                           size="icon"
                           onClick={() => toggleLike(track)}
                           className={`${theme.secondary} ${
-                            likedSongs.some((s) => s.id === track.id) ? "text-red-500" : ""
+                            likedSongs.some((likedSong) => likedSong.id === track.id) ? "text-red-500" : ""
                           }`}
                         >
                           <Heart className="h-4 w-4" />
@@ -825,7 +880,7 @@ export default function EnhancedMusicPlayer() {
                           </Button>
                           <div>
                             <p className="font-medium text-sm md:text-base">{track.title}</p>
-                            <p className="text-xs md:text-sm opacity-70">{track.artist}</p>{" "}
+                            <p className="text-xs md:text-sm opacity-70">{track.artist}</p>
                           </div>
                         </div>
                         <Button
@@ -871,7 +926,7 @@ export default function EnhancedMusicPlayer() {
                             size="icon"
                             onClick={() => toggleLike(track)}
                             className={`${theme.secondary} ${
-                              likedSongs.some((s) => s.id === track.id) ? "text-red-500" : ""
+                              likedSongs.some((likedSong) => likedSong.id === track.id) ? "text-red-500" : ""
                             }`}
                           >
                             <Heart className="h-4 w-4" />
@@ -948,6 +1003,7 @@ export default function EnhancedMusicPlayer() {
         isOpen={showDASS21Modal}
         onCloseAction={handleCloseDASS21Modal}
         onSubmitAction={handleDASS21Submit}
+        isReminder={!!localStorage.getItem("lastDASS21AnswerDate")}
       />
       <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
         <DialogContent className={`${theme.background} ${theme.text}`}>

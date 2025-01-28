@@ -13,6 +13,7 @@ type DASS21ModalProps = {
   isOpen: boolean
   onCloseAction: () => void
   onSubmitAction: (scores: DASSScores) => void
+  isReminder?: boolean
 }
 
 export default function DASS21Modal({ isOpen, onCloseAction, onSubmitAction }: DASS21ModalProps) {

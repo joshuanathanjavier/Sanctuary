@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AudioUploader } from "@/components/AudioUploader"
 import { TrackList } from "@/components/TrackList"
@@ -13,16 +13,32 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "@/components/ui/sidebar"
-import { logout } from "@/lib/actions"
+import { supabase } from "@/lib/supabase"
 import { LogOut, Upload, List } from "lucide-react"
+import { getSessionAndProfile } from "@/utils/sessionManager"
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<"upload" | "list">("upload")
   const router = useRouter()
 
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      const { session, profile } = await getSessionAndProfile()
+      if (!session || profile?.role !== "admin") {
+        router.push("/login")
+      }
+    }
+    checkAdminAccess()
+  }, [router])
+
   const handleLogout = async () => {
-    await logout()
-    router.push("/login")
+    try {
+      await supabase.auth.signOut()
+      router.push("/login")
+    } catch (error) {
+      console.error("Error during logout:", error)
+      // Optionally, show an error message to the user
+    }
   }
 
   return (

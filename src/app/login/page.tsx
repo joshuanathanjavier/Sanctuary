@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import { Eye, EyeOff } from "lucide-react"
+import { getSessionAndProfile } from "@/utils/sessionManager"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -28,6 +29,20 @@ export default function Login() {
       setVerificationMessage("Your account has been verified. You can now log in.")
     }
   }, [])
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { session, profile } = await getSessionAndProfile()
+      if (session) {
+        if (profile?.role === "admin") {
+          router.push("/admin")
+        } else {
+          router.push("/player")
+        }
+      }
+    }
+    checkSession()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,6 +72,9 @@ export default function Login() {
 
         // Set a flag in localStorage to indicate a new login
         localStorage.setItem("newLogin", "true")
+
+        // Set the auth cookie
+        await supabase.auth.setSession(data.session)
 
         if (profile.role === "admin") {
           router.push("/admin")
