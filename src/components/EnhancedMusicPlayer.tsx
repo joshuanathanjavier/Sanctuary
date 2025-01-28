@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Play, Pause, SkipForward, SkipBack, Volume2, Heart, X, User, LogOut, Settings, Edit } from "lucide-react"
+import { Play, Pause, SkipForward, SkipBack, Volume2, Heart, X, User, LogOut, Settings, Edit, Link } from "lucide-react"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts"
@@ -553,6 +553,7 @@ export default function EnhancedMusicPlayer() {
           }`}
         >
           <div className="m-auto">
+            <Link href="/">
             <Image
               src="/images/logo-with-text-logo.webp"
               alt="Logo"
@@ -561,6 +562,7 @@ export default function EnhancedMusicPlayer() {
               className="object-contain"
               objectFit="cover"
             />
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Dialog>
