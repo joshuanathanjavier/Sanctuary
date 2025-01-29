@@ -553,7 +553,6 @@ export default function EnhancedMusicPlayer() {
           }`}
         >
           <div className="m-auto">
-            <Link href="/">
             <Image
               src="/images/logo-with-text-logo.webp"
               alt="Logo"
@@ -562,7 +561,6 @@ export default function EnhancedMusicPlayer() {
               className="object-contain"
               objectFit="cover"
             />
-            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Dialog>

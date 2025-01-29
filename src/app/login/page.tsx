@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -18,20 +18,20 @@ export default function Login() {
   const [password, setPassword] = useState("")
   const [isView, setIsView] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null)
   const router = useRouter()
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const verified = urlParams.get("verified")
-    if (verified === "true") {
-      setVerificationMessage("Your account has been verified. You can now log in.")
-    }
-  }, [])
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const checkSession = async () => {
+      const reset = searchParams.get("reset")
+      if (reset === "true") {
+        await supabase.auth.signOut()
+        setIsLoading(false)
+        return
+      }
+
       const { session, profile } = await getSessionAndProfile()
       if (session) {
         if (profile?.role === "admin") {
@@ -39,10 +39,19 @@ export default function Login() {
         } else {
           router.push("/player")
         }
+      } else {
+        setIsLoading(false)
       }
     }
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const verified = urlParams.get("verified")
+    if (verified === "true") {
+      setVerificationMessage("Your account has been verified. You can now log in.")
+    }
+
     checkSession()
-  }, [router])
+  }, [router, searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,9 +64,7 @@ export default function Login() {
         password,
       })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       if (data.user) {
         const { data: profile, error: profileError } = await supabase
@@ -66,9 +73,7 @@ export default function Login() {
           .eq("id", data.user.id)
           .single()
 
-        if (profileError) {
-          throw new Error("Error fetching user profile")
-        }
+        if (profileError) throw new Error("Error fetching user profile")
 
         // Set a flag in localStorage to indicate a new login
         localStorage.setItem("newLogin", "true")
@@ -95,23 +100,20 @@ export default function Login() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-logUP bg-cover bg-center bg-no-repeat bg-fixed">
-      <header className="absolute top-20">
-        <br />
-        <div className="m-auto">
-          <Link href="/">
-            <Image
-              src="/images/text-logo.webp"
-              alt="Logo"
-              width={220}
-              height={40}
-              className="object-contain"
-              objectFit="cover"
-            />
-          </Link>
-        </div>
-      </header>
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="m-auto">
+            <Link href="/">
+              <Image
+                src="/images/text-logo.webp"
+                alt="Logo"
+                width={220}
+                height={40}
+                className="object-contain"
+                objectFit="cover"
+              />
+            </Link>
+          </div>
           <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
           <CardDescription className="text-center">Log in to your account</CardDescription>
         </CardHeader>
@@ -169,6 +171,12 @@ export default function Login() {
             Don't have an account?{" "}
             <Link href="/signup" className="text-blue-600 hover:underline">
               Sign up
+            </Link>
+          </p>
+          <p className="text-sm text-center">
+            Forgot your password?{" "}
+            <Link href="/forgot-password" className="text-blue-600 hover:underline">
+              Reset Password
             </Link>
           </p>
         </CardFooter>
