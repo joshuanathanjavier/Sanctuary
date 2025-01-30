@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,8 @@ import Image from "next/image"
 import { Eye, EyeOff } from "lucide-react"
 import { getSessionAndProfile } from "@/utils/sessionManager"
 
-export default function Login() {
+// Separate component for the login form to handle search params
+function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isView, setIsView] = useState(false)
@@ -21,15 +22,26 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(true)
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
-    const checkSession = async () => {
-      const reset = searchParams.get("reset")
+    const checkSessionAndReset = async () => {
+      // Get the current URL parameters
+      const params = new URLSearchParams(window.location.search)
+      const reset = params.get("reset")
+      const verified = params.get("verified")
+
       if (reset === "true") {
-        await supabase.auth.signOut()
-        setIsLoading(false)
-        return
+        try {
+          await supabase.auth.signOut()
+          setIsLoading(false)
+          return
+        } catch (error) {
+          console.error("Error signing out:", error)
+        }
+      }
+
+      if (verified === "true") {
+        setVerificationMessage("Your account has been verified. You can now log in.")
       }
 
       const { session, profile } = await getSessionAndProfile()
@@ -44,14 +56,24 @@ export default function Login() {
       }
     }
 
-    const urlParams = new URLSearchParams(window.location.search)
-    const verified = urlParams.get("verified")
-    if (verified === "true") {
-      setVerificationMessage("Your account has been verified. You can now log in.")
+    // Initial check
+    checkSessionAndReset()
+
+    // Listen for URL changes
+    const handleURLChange = () => {
+      checkSessionAndReset()
     }
 
-    checkSession()
-  }, [router, searchParams])
+    // Add event listeners for navigation
+    window.addEventListener("popstate", handleURLChange)
+    router.events?.on("routeChangeComplete", handleURLChange)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("popstate", handleURLChange)
+      router.events?.off("routeChangeComplete", handleURLChange)
+    }
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -182,6 +204,14 @@ export default function Login() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   )
 }
 
