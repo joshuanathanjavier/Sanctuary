@@ -1,19 +1,18 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import Image from "next/image"
 import { Eye, EyeOff } from "lucide-react"
 import { getSessionAndProfile } from "@/utils/sessionManager"
 
-// Separate component for the login form to handle search params
 function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -22,58 +21,42 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(true)
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+
+  const checkSessionAndReset = async () => {
+    const reset = searchParams.get("reset")
+    const verified = searchParams.get("verified")
+
+    if (reset === "true") {
+      try {
+        await supabase.auth.signOut()
+        setIsLoading(false)
+        return
+      } catch (error) {
+        console.error("Error signing out:", error)
+      }
+    }
+
+    if (verified === "true") {
+      setVerificationMessage("Your account has been verified. You can now log in.")
+    }
+
+    const { session, profile } = await getSessionAndProfile()
+    if (session) {
+      if (profile?.role === "admin") {
+        router.push("/admin")
+      } else {
+        router.push("/player")
+      }
+    } else {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const checkSessionAndReset = async () => {
-      // Get the current URL parameters
-      const params = new URLSearchParams(window.location.search)
-      const reset = params.get("reset")
-      const verified = params.get("verified")
-
-      if (reset === "true") {
-        try {
-          await supabase.auth.signOut()
-          setIsLoading(false)
-          return
-        } catch (error) {
-          console.error("Error signing out:", error)
-        }
-      }
-
-      if (verified === "true") {
-        setVerificationMessage("Your account has been verified. You can now log in.")
-      }
-
-      const { session, profile } = await getSessionAndProfile()
-      if (session) {
-        if (profile?.role === "admin") {
-          router.push("/admin")
-        } else {
-          router.push("/player")
-        }
-      } else {
-        setIsLoading(false)
-      }
-    }
-
-    // Initial check
     checkSessionAndReset()
-
-    // Listen for URL changes
-    const handleURLChange = () => {
-      checkSessionAndReset()
-    }
-
-    // Add event listeners for navigation
-    window.addEventListener("popstate", handleURLChange)
-    router.events?.on("routeChangeComplete", handleURLChange)
-
-    // Cleanup
-    return () => {
-      window.removeEventListener("popstate", handleURLChange)
-      router.events?.off("routeChangeComplete", handleURLChange)
-    }
-  }, [router])
+  }, [pathname, searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
