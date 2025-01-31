@@ -20,6 +20,7 @@ import { BarChart } from "lucide-react"
 import { recommendGenres } from "@/utils/recommendGenre"
 import "@/styles/custom-scrollbar.css"
 import { getSessionAndProfile } from "@/utils/sessionManager"
+import Link from "next/link"
 
 type SeverityLevel = "Normal" | "Mild" | "Moderate" | "Severe" | "Extremely Severe"
 
@@ -172,35 +173,39 @@ export default function EnhancedMusicPlayer() {
   const [isLoading, setIsLoading] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(true) 
+  const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(true)
+  const [currentTab, setCurrentTab] = useState<"allSongs" | "playlist" | "recommended">("allSongs")
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const fetchSongs = async () => {
-      setIsLoadingLikedSongs(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
+      setIsLoadingLikedSongs(true)
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession()
       if (error) {
-        console.error("Error getting session:", error);
-        setIsLoadingLikedSongs(false);
-        return;
+        console.error("Error getting session:", error)
+        setIsLoadingLikedSongs(false)
+        return
       }
 
       if (session) {
-        const userId = session.user.id;
-        console.log("User ID:", userId); 
-        const likedSongIds = await fetchLikedSongs(userId);
-        console.log("Liked Song IDs:", likedSongIds); 
-        const likedTracks = tracks.filter(track => likedSongIds.includes(track.id));
-        setLikedSongs(likedTracks);
+        const userId = session.user.id
+        console.log("User ID:", userId)
+        const likedSongIds = await fetchLikedSongs(userId)
+        console.log("Liked Song IDs:", likedSongIds)
+        const likedTracks = tracks.filter((track) => likedSongIds.includes(track.id))
+        setLikedSongs(likedTracks)
       } else {
-        console.log("No session found"); 
+        console.log("No session found")
       }
-      setIsLoadingLikedSongs(false);
-    };
+      setIsLoadingLikedSongs(false)
+    }
 
-    fetchSongs();
-  }, [tracks]);
+    fetchSongs()
+  }, [tracks])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -209,7 +214,6 @@ export default function EnhancedMusicPlayer() {
         setTracks(sortTracksByTitle(fetchedTracks))
       } catch (error) {
         console.error("Error fetching data:", error)
-        
       }
     }
     fetchData()
@@ -291,11 +295,11 @@ export default function EnhancedMusicPlayer() {
 
       if (session && newLogin === "true") {
         setShowDASS21Modal(true)
-        localStorage.removeItem("newLogin") 
+        localStorage.removeItem("newLogin")
       } else if (lastAnswerDate && hasSevenDaysPassed(lastAnswerDate)) {
         setShowDASS21Modal(true)
       } else {
-        loadDassScores() 
+        loadDassScores()
       }
     }
 
@@ -309,11 +313,10 @@ export default function EnhancedMusicPlayer() {
     if (savedContentDensity) {
       setContentDensity(savedContentDensity)
     }
-    if (savedTheme) {
+    if (savedTheme && Object.keys(themes).includes(savedTheme)) {
       setCurrentTheme(savedTheme)
     }
   }, [])
-
 
   useEffect(() => {
     const savedScores = localStorage.getItem("dassScores")
@@ -325,6 +328,18 @@ export default function EnhancedMusicPlayer() {
   }, [])
 
   const togglePlay = () => {
+    let currentTracks: Track[]
+    switch (currentTab) {
+      case "playlist":
+        currentTracks = filterTracks(likedSongs)
+        break
+      case "recommended":
+        currentTracks = filterTracks(recommendedSongs)
+        break
+      default:
+        currentTracks = filteredTracks
+    }
+
     if (currentSong && !isLoading) {
       if (isPlaying) {
         audioRef.current?.pause()
@@ -332,12 +347,29 @@ export default function EnhancedMusicPlayer() {
         audioRef.current?.play()
       }
       setIsPlaying(!isPlaying)
-    } else if (tracks.length > 0 && !isLoading) {
-      playSong(sortTracksByTitle(tracks)[0])
+    } else if (currentTracks.length > 0 && !isLoading) {
+      playSong(currentTracks[0])
     }
   }
 
   const playSong = (track: Track) => {
+    let currentTracks: Track[]
+    switch (currentTab) {
+      case "playlist":
+        currentTracks = filterTracks(likedSongs)
+        break
+      case "recommended":
+        currentTracks = filterTracks(recommendedSongs)
+        break
+      default:
+        currentTracks = filteredTracks
+    }
+
+    if (!currentTracks.some((t) => t.id === track.id)) {
+      console.log("Song not in current tab's playlist")
+      return
+    }
+
     setCurrentSong(track)
     setIsLoading(true)
     if (audioRef.current) {
@@ -357,20 +389,42 @@ export default function EnhancedMusicPlayer() {
   }
 
   const playNextSong = () => {
-    if (tracks.length > 0) {
-      const sortedTracks = sortTracksByTitle(tracks)
-      const currentIndex = currentSong ? sortedTracks.findIndex((track) => track.id === currentSong.id) : -1
-      const nextIndex = (currentIndex + 1) % sortedTracks.length
-      playSong(sortedTracks[nextIndex])
+    let currentTracks: Track[]
+    switch (currentTab) {
+      case "playlist":
+        currentTracks = filterTracks(likedSongs)
+        break
+      case "recommended":
+        currentTracks = filterTracks(recommendedSongs)
+        break
+      default:
+        currentTracks = filteredTracks
+    }
+
+    if (currentTracks.length > 0) {
+      const currentIndex = currentSong ? currentTracks.findIndex((track) => track.id === currentSong.id) : -1
+      const nextIndex = (currentIndex + 1) % currentTracks.length
+      playSong(currentTracks[nextIndex])
     }
   }
 
   const playPreviousSong = () => {
-    if (tracks.length > 0) {
-      const sortedTracks = sortTracksByTitle(tracks)
-      const currentIndex = currentSong ? sortedTracks.findIndex((track) => track.id === currentSong.id) : 0
-      const previousIndex = (currentIndex - 1 + sortedTracks.length) % sortedTracks.length
-      playSong(sortedTracks[previousIndex])
+    let currentTracks: Track[]
+    switch (currentTab) {
+      case "playlist":
+        currentTracks = filterTracks(likedSongs)
+        break
+      case "recommended":
+        currentTracks = filterTracks(recommendedSongs)
+        break
+      default:
+        currentTracks = filteredTracks
+    }
+
+    if (currentTracks.length > 0) {
+      const currentIndex = currentSong ? currentTracks.findIndex((track) => track.id === currentSong.id) : 0
+      const previousIndex = (currentIndex - 1 + currentTracks.length) % currentTracks.length
+      playSong(currentTracks[previousIndex])
     }
   }
 
@@ -401,7 +455,6 @@ export default function EnhancedMusicPlayer() {
       router.push("/login")
     } catch (error) {
       console.error("Error during logout:", error)
-      
     }
   }
 
@@ -498,7 +551,6 @@ export default function EnhancedMusicPlayer() {
       if (recommendedTracks.length >= 9) break
     }
 
-    
     if (recommendedTracks.length < 9) {
       const remainingTracks = tracks.filter((track) => !usedTrackIds.has(track.id))
       const shuffledRemaining = remainingTracks.sort(() => 0.5 - Math.random())
@@ -567,7 +619,7 @@ export default function EnhancedMusicPlayer() {
         }
       }
     }
-    return 100 
+    return 100
   }
 
   const handleContentDensityChange = (value: "compact" | "comfortable") => {
@@ -581,7 +633,9 @@ export default function EnhancedMusicPlayer() {
   }
 
   const toggleLike = async (track: Track) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) return
 
     const isLiked = likedSongs.some((likedSong) => likedSong.id === track.id)
@@ -589,22 +643,16 @@ export default function EnhancedMusicPlayer() {
 
     if (isLiked) {
       updatedLikedSongs = likedSongs.filter((likedSong) => likedSong.id !== track.id)
-      await supabase
-        .from('liked_songs')
-        .delete()
-        .match({ user_id: user.id, track_id: track.id })
+      await supabase.from("liked_songs").delete().match({ user_id: user.id, track_id: track.id })
     } else {
       updatedLikedSongs = [...likedSongs, track]
-      await supabase
-        .from('liked_songs')
-        .insert({ user_id: user.id, track_id: track.id })
+      await supabase.from("liked_songs").insert({ user_id: user.id, track_id: track.id })
     }
 
     setLikedSongs(updatedLikedSongs)
   }
 
   const theme = themes[currentTheme]
-
 
   return (
     <div className={`h-screen flex flex-col ${theme.background} ${theme.text} relative overflow-hidden`}>
@@ -616,6 +664,7 @@ export default function EnhancedMusicPlayer() {
           }`}
         >
           <div className="m-auto">
+            <Link href="/">
             <Image
               src="/images/logo-with-text-logo.webp"
               alt="Logo"
@@ -624,6 +673,7 @@ export default function EnhancedMusicPlayer() {
               style={{ objectFit: "cover", width: 150, height: 40 }}
               priority
             />
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Dialog>
@@ -779,9 +829,9 @@ export default function EnhancedMusicPlayer() {
                       </SelectTrigger>
                       <SelectContent className={`${theme.primary} ${theme.text}`}>
                         <SelectItem value="comfortable">Comfortable</SelectItem>
-                        <SelectItem value="compact">Compact</SelectItem>
+                        <SelectItem value="compact">Compact</SelectItem>{" "}
                       </SelectContent>
-                    </Select>
+                    </Select>{" "}
                   </div>
                   <div>
                     <label htmlFor="theme" className="block text-sm font-medium mb-1">
@@ -801,6 +851,7 @@ export default function EnhancedMusicPlayer() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>{/*Rest of the settings here*/}</div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -874,7 +925,11 @@ export default function EnhancedMusicPlayer() {
               </div>
             </div>
 
-            <Tabs defaultValue="allSongs" className="w-full flex-1 flex flex-col overflow-hidden">
+            <Tabs
+              defaultValue="allSongs"
+              className="w-full flex-1 flex flex-col overflow-hidden"
+              onValueChange={(value) => setCurrentTab(value as "allSongs" | "playlist" | "recommended")}
+            >
               <TabsList className={`grid w-full grid-cols-3 mb-4 ${theme.secondary} ${theme.text}`}>
                 <TabsTrigger value="allSongs" className={`data-[state=active]:${theme.primary}`}>
                   All Songs
