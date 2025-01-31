@@ -1,39 +1,55 @@
 type SeverityLevel = "Normal" | "Mild" | "Moderate" | "Severe" | "Extremely Severe"
 
 export function recommendGenres(depression: SeverityLevel, anxiety: SeverityLevel, stress: SeverityLevel): string[] {
-  const severityOrder = ["Normal", "Mild", "Moderate", "Severe", "Extremely Severe"]
-  const maxSeverity = Math.max(
-    severityOrder.indexOf(depression),
-    severityOrder.indexOf(anxiety),
-    severityOrder.indexOf(stress),
-  )
+  const depressionGenres = getGenresForCondition(depression, "depression")
+  const anxietyGenres = getGenresForCondition(anxiety, "anxiety")
+  const stressGenres = getGenresForCondition(stress, "stress")
 
-  const primaryGenre = getPrimaryGenre(maxSeverity)
-  const secondaryGenres = getSecondaryGenres(primaryGenre)
+  return [...depressionGenres, ...anxietyGenres, ...stressGenres]
+}
 
+function getGenresForCondition(severity: SeverityLevel, condition: "depression" | "anxiety" | "stress"): string[] {
+  const primaryGenre = getPrimaryGenre(severity, condition)
+  const secondaryGenres = getSecondaryGenres(primaryGenre, condition)
   return [primaryGenre, ...secondaryGenres]
 }
 
-function getPrimaryGenre(maxSeverity: number): string {
-  switch (maxSeverity) {
-    case 0: // Normal
-      return "Lofi"
-    case 1: // Mild
-      return "Instrumental"
-    case 2: // Moderate
-      return "Ambient"
-    case 3: // Severe
-      return "Nature"
-    case 4: // Extremely-Severe
-      return "Atmospheric"
-    default:
-      return "Lofi"
+function getPrimaryGenre(severity: SeverityLevel, condition: "depression" | "anxiety" | "stress"): string {
+  const genreMap = {
+    depression: {
+      Normal: "Lofi",
+      Mild: "Instrumental",
+      Moderate: "Ambient",
+      Severe: "Nature",
+      "Extremely Severe": "Atmospheric",
+    },
+    anxiety: {
+      Normal: "Lofi",
+      Mild: "Nature",
+      Moderate: "Ambient",
+      Severe: "Atmospheric",
+      "Extremely Severe": "Instrumental",
+    },
+    stress: {
+      Normal: "Lofi",
+      Mild: "Nature",
+      Moderate: "Instrumental",
+      Severe: "Ambient",
+      "Extremely Severe": "Atmospheric",
+    },
   }
+
+  return genreMap[condition][severity]
 }
 
-function getSecondaryGenres(primaryGenre: string): string[] {
-  const allGenres = ["Lofi", "Instrumental", "Ambient", "Nature", "Atmospheric", "Sentimental", "Magnificent"]
-  const secondaryGenres = allGenres.filter((genre) => genre !== primaryGenre)
-  return secondaryGenres.slice(0, 3) // Return 3 secondary genres
+function getSecondaryGenres(primaryGenre: string, condition: "depression" | "anxiety" | "stress"): string[] {
+  const allGenres = {
+    depression: ["Lofi", "Instrumental", "Ambient", "Nature", "Atmospheric", "Sentimental", "Magnificent"],
+    anxiety: ["Lofi", "Nature", "Ambient", "Atmospheric", "Instrumental", "Dark", "Energizing"],
+    stress: ["Lofi", "Nature", "Instrumental", "Ambient", "Atmospheric", "Sentimental", "Magnificent"],
+  }
+
+  const secondaryGenres = allGenres[condition].filter((genre) => genre !== primaryGenre)
+  return secondaryGenres.slice(0, 2) // Return 2 secondary genres (3 total with primary)
 }
 

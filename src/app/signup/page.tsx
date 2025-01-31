@@ -15,7 +15,9 @@ import { Eye, EyeOff } from "lucide-react"
 export default function Signup() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [isView, setIsView] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isPasswordView, setIsPasswordView] = useState(false)
+  const [isConfirmPasswordView, setIsConfirmPasswordView] = useState(false)
   const [otp, setOtp] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -28,6 +30,11 @@ export default function Signup() {
     e.preventDefault()
     setError(null)
     setMessage(null)
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please try again.")
+      return
+    }
 
     if (!isOtpSent) {
       // First step: Check if the account exists
@@ -113,18 +120,19 @@ export default function Signup() {
     <div className="flex items-center justify-center min-h-screen bg-logUP bg-cover bg-center bg-no-repeat bg-fixed">
       <Card className="w-full max-w-md">
         <CardHeader>
-        <div className="m-auto">
-          <Link href="/">
-            <Image
-              src="/images/text-logo.webp"
-              alt="Logo"
-              width={220}
-              height={40}
-              className="object-contain"
-              objectFit="cover"
-            />
-          </Link>
-        </div>
+          <div className="m-auto">
+            <Link href="/">
+              <Image
+                src="/images/text-logo.webp"
+                alt="Logo"
+                width={220}
+                height={40}
+                className="object-contain"
+                objectFit="cover"
+                priority
+              />
+            </Link>
+          </div>
           <CardTitle className="text-2xl font-bold text-center">Sign Up</CardTitle>
           <CardDescription className="text-center">Create account to start listening now</CardDescription>
         </CardHeader>
@@ -159,7 +167,7 @@ export default function Signup() {
               <div className="relative">
                 <Input
                   id="password"
-                  type={isView ? "text" : "password"}
+                  type={isPasswordView ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -168,9 +176,29 @@ export default function Signup() {
                 />
                 <div
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 cursor-pointer"
-                  onClick={() => setIsView(!isView)}
+                  onClick={() => setIsPasswordView(!isPasswordView)}
                 >
-                  {isView ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {isPasswordView ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2 relative">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={isConfirmPasswordView ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isOtpSent}
+                />
+                <div
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 cursor-pointer"
+                  onClick={() => setIsConfirmPasswordView(!isConfirmPasswordView)}
+                >
+                  {isConfirmPasswordView ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </div>
               </div>
             </div>

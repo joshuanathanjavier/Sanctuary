@@ -116,6 +116,7 @@ function LoginForm() {
                 height={40}
                 className="object-contain"
                 objectFit="cover"
+                priority
               />
             </Link>
           </div>

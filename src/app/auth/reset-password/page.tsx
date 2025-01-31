@@ -113,6 +113,7 @@ export default function ResetPassword() {
                 height={40}
                 className="object-contain"
                 objectFit="cover"
+                priority
               />
             </Link>
           </div>

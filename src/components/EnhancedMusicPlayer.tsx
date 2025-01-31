@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Play, Pause, SkipForward, SkipBack, Volume2, Heart, X, User, LogOut, Settings, Edit, Link } from "lucide-react"
+import { Play, Pause, SkipForward, SkipBack, Volume2, Heart, X, User, LogOut, Settings, Edit } from "lucide-react"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts"
@@ -142,6 +142,17 @@ const hasSevenDaysPassed = (lastAnswerDate: string) => {
   return diffDays >= 7
 }
 
+const fetchLikedSongs = async (userId: string): Promise<string[]> => {
+  const { data, error } = await supabase.from("liked_songs").select("track_id").eq("user_id", userId)
+
+  if (error) {
+    console.error("Error fetching liked songs:", error)
+    return []
+  }
+
+  return data.map((item) => item.track_id)
+}
+
 export default function EnhancedMusicPlayer() {
   const [currentSong, setCurrentSong] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -161,8 +172,35 @@ export default function EnhancedMusicPlayer() {
   const [isLoading, setIsLoading] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(true) 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const fetchSongs = async () => {
+      setIsLoadingLikedSongs(true);
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting session:", error);
+        setIsLoadingLikedSongs(false);
+        return;
+      }
+
+      if (session) {
+        const userId = session.user.id;
+        console.log("User ID:", userId); 
+        const likedSongIds = await fetchLikedSongs(userId);
+        console.log("Liked Song IDs:", likedSongIds); 
+        const likedTracks = tracks.filter(track => likedSongIds.includes(track.id));
+        setLikedSongs(likedTracks);
+      } else {
+        console.log("No session found"); 
+      }
+      setIsLoadingLikedSongs(false);
+    };
+
+    fetchSongs();
+  }, [tracks]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -171,7 +209,7 @@ export default function EnhancedMusicPlayer() {
         setTracks(sortTracksByTitle(fetchedTracks))
       } catch (error) {
         console.error("Error fetching data:", error)
-        // Handle the error appropriately, e.g., show an error message to the user
+        
       }
     }
     fetchData()
@@ -188,7 +226,6 @@ export default function EnhancedMusicPlayer() {
     }
     checkUserAccess()
   }, [router])
-
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -254,11 +291,11 @@ export default function EnhancedMusicPlayer() {
 
       if (session && newLogin === "true") {
         setShowDASS21Modal(true)
-        localStorage.removeItem("newLogin") // Remove the flag after showing the modal
+        localStorage.removeItem("newLogin") 
       } else if (lastAnswerDate && hasSevenDaysPassed(lastAnswerDate)) {
         setShowDASS21Modal(true)
       } else {
-        loadDassScores() // Load saved scores if not a new login and 7 days haven't passed
+        loadDassScores() 
       }
     }
 
@@ -277,20 +314,15 @@ export default function EnhancedMusicPlayer() {
     }
   }, [])
 
-  useEffect(() => {
-    const savedLikedSongs = localStorage.getItem("likedSongs")
-    if (savedLikedSongs) {
-      setLikedSongs(JSON.parse(savedLikedSongs))
-    }
-  }, [])
 
   useEffect(() => {
-    if (tracks.length > 0) {
-      const updatedLikedSongs = likedSongs.filter((likedSong) => tracks.some((track) => track.id === likedSong.id))
-      setLikedSongs(updatedLikedSongs)
-      localStorage.setItem("likedSongs", JSON.stringify(updatedLikedSongs))
+    const savedScores = localStorage.getItem("dassScores")
+    if (savedScores) {
+      const scores = JSON.parse(savedScores)
+      setDassScores(scores)
+      recommendSongs(scores)
     }
-  }, [tracks])
+  }, [])
 
   const togglePlay = () => {
     if (currentSong && !isLoading) {
@@ -342,13 +374,17 @@ export default function EnhancedMusicPlayer() {
     }
   }
 
-  const filteredTracks = sortTracksByTitle(tracks).filter(
-    (track) =>
-      (selectedGenre === "All" || track.genre === selectedGenre) &&
-      (searchTerm === "" ||
-        track.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        track.artist.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  const filterTracks = (tracks: Track[]) => {
+    return tracks.filter(
+      (track) =>
+        (selectedGenre === "All" || track.genre === selectedGenre) &&
+        (searchTerm === "" ||
+          track.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          track.artist.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+  }
+
+  const filteredTracks = filterTracks(sortTracksByTitle(tracks))
 
   const formatTime = (seconds: number | undefined) => {
     if (typeof seconds !== "number" || isNaN(seconds)) {
@@ -365,7 +401,7 @@ export default function EnhancedMusicPlayer() {
       router.push("/login")
     } catch (error) {
       console.error("Error during logout:", error)
-      // Optionally, show an error message to the user
+      
     }
   }
 
@@ -374,6 +410,7 @@ export default function EnhancedMusicPlayer() {
     localStorage.setItem("dassScores", JSON.stringify(scores))
     localStorage.setItem("lastDASS21AnswerDate", new Date().toISOString())
     setShowDASS21Modal(false)
+    recommendSongs(scores)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -443,19 +480,33 @@ export default function EnhancedMusicPlayer() {
 
     const recommendedGenres = recommendGenres(depressionSeverity, anxietySeverity, stressSeverity)
 
-    let recommendedTracks: Track[] = []
+    const recommendedTracks: Track[] = []
+    const usedTrackIds = new Set<string>()
+
     for (const genre of recommendedGenres) {
-      const genreFilteredTracks = tracks.filter((track) => track.genre === genre)
+      const genreFilteredTracks = tracks.filter((track) => track.genre === genre && !usedTrackIds.has(track.id))
       const shuffledTracks = genreFilteredTracks.sort(() => 0.5 - Math.random())
-      recommendedTracks = [...recommendedTracks, ...shuffledTracks.slice(0, 2)]
-      if (recommendedTracks.length >= 5) break
+
+      for (const track of shuffledTracks) {
+        if (!usedTrackIds.has(track.id)) {
+          recommendedTracks.push(track)
+          usedTrackIds.add(track.id)
+          if (recommendedTracks.length >= 9) break
+        }
+      }
+
+      if (recommendedTracks.length >= 9) break
     }
 
-    // If we still don't have 5 tracks, add random tracks from any genre
-    if (recommendedTracks.length < 5) {
-      const remainingTracks = tracks.filter((track) => !recommendedTracks.includes(track))
+    
+    if (recommendedTracks.length < 9) {
+      const remainingTracks = tracks.filter((track) => !usedTrackIds.has(track.id))
       const shuffledRemaining = remainingTracks.sort(() => 0.5 - Math.random())
-      recommendedTracks = [...recommendedTracks, ...shuffledRemaining.slice(0, 5 - recommendedTracks.length)]
+      for (const track of shuffledRemaining) {
+        if (recommendedTracks.length >= 9) break
+        recommendedTracks.push(track)
+        usedTrackIds.add(track.id)
+      }
     }
 
     setRecommendedSongs(recommendedTracks)
@@ -516,7 +567,7 @@ export default function EnhancedMusicPlayer() {
         }
       }
     }
-    return 100 // If the value is higher than the maximum in the ranges
+    return 100 
   }
 
   const handleContentDensityChange = (value: "compact" | "comfortable") => {
@@ -529,27 +580,39 @@ export default function EnhancedMusicPlayer() {
     localStorage.setItem("currentTheme", value)
   }
 
-  const toggleLike = (track: Track) => {
+  const toggleLike = async (track: Track) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
     const isLiked = likedSongs.some((likedSong) => likedSong.id === track.id)
     let updatedLikedSongs
+
     if (isLiked) {
       updatedLikedSongs = likedSongs.filter((likedSong) => likedSong.id !== track.id)
+      await supabase
+        .from('liked_songs')
+        .delete()
+        .match({ user_id: user.id, track_id: track.id })
     } else {
       updatedLikedSongs = [...likedSongs, track]
+      await supabase
+        .from('liked_songs')
+        .insert({ user_id: user.id, track_id: track.id })
     }
+
     setLikedSongs(updatedLikedSongs)
-    localStorage.setItem("likedSongs", JSON.stringify(updatedLikedSongs))
   }
 
   const theme = themes[currentTheme]
+
 
   return (
     <div className={`h-screen flex flex-col ${theme.background} ${theme.text} relative overflow-hidden`}>
       <AnimatedBackground theme={currentTheme} />
       <div className="flex flex-col h-full relative z-10">
         <div
-          className={`flex justify-between items-center p-4 md:p-10 ${theme.primary} shadow-md ${
-            contentDensity === "compact" ? "py-2" : "py-4"
+          className={`flex justify-between items-center p-4 md:p-6 ${theme.primary} shadow-md ${
+            contentDensity === "compact" ? "py-2 md:py-3" : "py-4 md:py-6"
           }`}
         >
           <div className="m-auto">
@@ -558,8 +621,8 @@ export default function EnhancedMusicPlayer() {
               alt="Logo"
               width={150}
               height={40}
-              className="object-contain"
-              objectFit="cover"
+              style={{ objectFit: "cover", width: 150, height: 40 }}
+              priority
             />
           </div>
           <div className="flex items-center gap-4">
@@ -715,8 +778,8 @@ export default function EnhancedMusicPlayer() {
                         <SelectValue placeholder="Select density" />
                       </SelectTrigger>
                       <SelectContent className={`${theme.primary} ${theme.text}`}>
-                        <SelectItem value="compact">Compact</SelectItem>
                         <SelectItem value="comfortable">Comfortable</SelectItem>
+                        <SelectItem value="compact">Compact</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -772,9 +835,14 @@ export default function EnhancedMusicPlayer() {
             </Button>
           </div>
         )}
-        <div className="flex-1 p-4 md:p-8 overflow-hidden flex flex-col" style={{ paddingBottom: "120px" }}>
+        <div
+          className={`flex-1 overflow-hidden flex flex-col ${
+            contentDensity === "compact" ? "p-2 md:p-4" : "p-4 md:p-8"
+          }`}
+          style={{ paddingBottom: contentDensity === "compact" ? "100px" : "120px" }}
+        >
           <div className="max-w-4xl mx-auto h-full flex flex-col">
-            <div className="mb-8">
+            <div className={`mb-4 ${contentDensity === "compact" ? "space-y-2" : "space-y-4"}`}>
               <div className="flex flex-row gap-2 mb-4 w-full">
                 <Input
                   type="search"
@@ -792,7 +860,7 @@ export default function EnhancedMusicPlayer() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className={`flex flex-wrap ${contentDensity === "compact" ? "gap-1" : "gap-2"}`}>
                 {genres.map((genre) => (
                   <Button
                     key={genre}
@@ -824,7 +892,9 @@ export default function EnhancedMusicPlayer() {
                     {filteredTracks.map((track) => (
                       <div
                         key={track.id}
-                        className={`flex items-center justify-between p-2 rounded-md hover:${theme.secondary} transition-colors`}
+                        className={`flex items-center justify-between rounded-md hover:${theme.secondary} transition-colors ${
+                          contentDensity === "compact" ? "p-1" : "p-2"
+                        }`}
                       >
                         <div className="flex items-center gap-2">
                           <Button
@@ -840,8 +910,16 @@ export default function EnhancedMusicPlayer() {
                             )}
                           </Button>
                           <div>
-                            <p className="font-medium text-sm md:text-base">{track.title}</p>
-                            <p className="text-xs md:text-sm opacity-70">{track.artist}</p>
+                            <p
+                              className={`font-medium ${contentDensity === "compact" ? "text-xs md:text-sm" : "text-sm md:text-base"}`}
+                            >
+                              {track.title}
+                            </p>
+                            <p
+                              className={`opacity-70 ${contentDensity === "compact" ? "text-xs" : "text-xs md:text-sm"}`}
+                            >
+                              {track.artist}
+                            </p>
                           </div>
                         </div>
                         <Button
@@ -860,48 +938,15 @@ export default function EnhancedMusicPlayer() {
                 </TabsContent>
                 <TabsContent value="playlist" className="h-full overflow-y-auto custom-scrollbar">
                   <div className="pb-20">
-                    {likedSongs.map((track) => (
-                      <div
-                        key={track.id}
-                        className={`flex items-center justify-between p-2 rounded-md hover:${theme.secondary} transition-colors`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => playSong(track)}
-                            className={theme.secondary}
-                          >
-                            {currentSong?.id === track.id && isPlaying ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <div>
-                            <p className="font-medium text-sm md:text-base">{track.title}</p>
-                            <p className="text-xs md:text-sm opacity-70">{track.artist}</p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleLike(track)}
-                          className={`${theme.secondary} text-red-500`}
-                        >
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </TabsContent>
-                <TabsContent value="recommended" className="h-full overflow-y-auto custom-scrollbar">
-                  <div className="pb-10">
-                    {recommendedSongs.length > 0 ? (
-                      recommendedSongs.map((track) => (
+                    {isLoadingLikedSongs ? (
+                      <p className="text-center">Loading liked songs...</p>
+                    ) : filterTracks(likedSongs).length > 0 ? (
+                      filterTracks(likedSongs).map((track) => (
                         <div
                           key={track.id}
-                          className={`flex items-center justify-between p-2 rounded-md hover:${theme.secondary} transition-colors`}
+                          className={`flex items-center justify-between rounded-md hover:${theme.secondary} transition-colors ${
+                            contentDensity === "compact" ? "p-1" : "p-2"
+                          }`}
                         >
                           <div className="flex items-center gap-2">
                             <Button
@@ -917,8 +962,67 @@ export default function EnhancedMusicPlayer() {
                               )}
                             </Button>
                             <div>
-                              <p className="font-medium text-sm md:text-base">{track.title}</p>
-                              <p className="text-xs md:text-sm opacity-70">{track.artist}</p>
+                              <p
+                                className={`font-medium ${contentDensity === "compact" ? "text-xs md:text-sm" : "text-sm md:text-base"}`}
+                              >
+                                {track.title}
+                              </p>
+                              <p
+                                className={`opacity-70 ${contentDensity === "compact" ? "text-xs" : "text-xs md:text-sm"}`}
+                              >
+                                {track.artist}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleLike(track)}
+                            className={`${theme.secondary} text-red-500`}
+                          >
+                            <Heart className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center">No liked songs found matching the current filters.</p>
+                    )}
+                  </div>
+                </TabsContent>
+                <TabsContent value="recommended" className="h-full overflow-y-auto custom-scrollbar">
+                  <div className="pb-10">
+                    {filterTracks(recommendedSongs).length > 0 ? (
+                      filterTracks(recommendedSongs).map((track) => (
+                        <div
+                          key={track.id}
+                          className={`flex items-center justify-between rounded-md hover:${theme.secondary} transition-colors ${
+                            contentDensity === "compact" ? "p-1" : "p-2"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => playSong(track)}
+                              className={theme.secondary}
+                            >
+                              {currentSong?.id === track.id && isPlaying ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <div>
+                              <p
+                                className={`font-medium ${contentDensity === "compact" ? "text-xs md:text-sm" : "text-sm md:text-base"}`}
+                              >
+                                {track.title}
+                              </p>
+                              <p
+                                className={`opacity-70 ${contentDensity === "compact" ? "text-xs" : "text-xs md:text-sm"}`}
+                              >
+                                {track.artist}
+                              </p>
                             </div>
                           </div>
                           <Button
@@ -934,7 +1038,11 @@ export default function EnhancedMusicPlayer() {
                         </div>
                       ))
                     ) : (
-                      <p className="text-center">No recommendations available. Please complete the Mood Checker.</p>
+                      <p className="text-center">
+                        {recommendedSongs.length === 0
+                          ? "No recommendations available. Please complete the Mood Checker."
+                          : "No recommended songs found matching the current filters."}
+                      </p>
                     )}
                   </div>
                 </TabsContent>
@@ -943,8 +1051,8 @@ export default function EnhancedMusicPlayer() {
           </div>
         </div>
         <div
-          className={`fixed bottom-0 left-0 right-0 ${theme.primary} p-2 md:p-4 shadow-md ${
-            contentDensity === "compact" ? "py-1 md:py-2" : "py-2 md:py-4"
+          className={`fixed bottom-0 left-0 right-0 ${theme.primary} shadow-md ${
+            contentDensity === "compact" ? "p-1 md:p-2" : "p-2 md:p-4"
           }`}
         >
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-2 md:gap-4">
@@ -952,8 +1060,14 @@ export default function EnhancedMusicPlayer() {
               {currentSong && (
                 <div className="flex items-center justify-center md:justify-start">
                   <div className="text-center md:text-left">
-                    <p className="font-medium text-sm md:text-base truncate">{currentSong.title}</p>
-                    <p className="text-xs md:text-sm opacity-70 truncate">{currentSong.artist}</p>
+                    <p
+                      className={`font-medium ${contentDensity === "compact" ? "text-xs md:text-sm" : "text-sm md:text-base"}`}
+                    >
+                      {currentSong.title}
+                    </p>
+                    <p className={`opacity-70 ${contentDensity === "compact" ? "text-xs" : "text-xs md:text-sm"}`}>
+                      {currentSong.artist}
+                    </p>
                   </div>
                 </div>
               )}
@@ -969,7 +1083,7 @@ export default function EnhancedMusicPlayer() {
                 <SkipForward className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex-1 flex items-center gap-2 w-fullmd:w-auto">
+            <div className="flex-1 flex items-center gap-2 w-full md:w-auto">
               <span className="text-xs md:text-sm w-10 text-right">{formatTime(audioRef.current?.currentTime)}</span>
               <Slider
                 value={[progress]}

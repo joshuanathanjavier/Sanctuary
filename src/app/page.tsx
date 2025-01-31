@@ -6,12 +6,19 @@ import Image from "next/image"
 import { Menu, X, Facebook, Instagram, Twitter, Linkedin, Sun, Music, Users, Heart } from "lucide-react"
 import SeeMoreParagraph from "@/components/SeeMoreParagraph"
 import Script from "next/script"
+import { getSessionAndProfile } from "@/utils/sessionManager"
+import { useRouter } from "next/navigation"
+import { Session } from '@supabase/supabase-js'
 
 export default function SanctuaryHome() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeSlide, setActiveSlide] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [session, setSession] = useState<Session | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+
   const argao =
     "Argao Psych, the largest private mental health center in Central Luzon, has teamed up with the Sanctuary App to bring expert mental health support directly to your fingertips. Known for their innovative in-clinic and online services, Argao Psych helps shape Sanctuary's features to provide users with tools and resources rooted in real mental health care expertise. With this partnership, Sanctuary users can access thoughtfully designed relaxation programs and wellness tools inspired by Argao Psych's years of experience in counseling, assessments, and workplace wellness. Together, we're creating a platform that truly supports mental well-being, making professional care more accessible and relevant for Filipinos."
   const goddame =
@@ -62,6 +69,16 @@ export default function SanctuaryHome() {
     },
   ]
 
+  const checkSession = async () => {
+    const { session, profile } = await getSessionAndProfile()
+    setSession(session)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    checkSession()
+  }, [])
+
   const show = (id: string) => {
     const pages = document.querySelectorAll(".page");
     pages.forEach((page) => {
@@ -111,7 +128,7 @@ export default function SanctuaryHome() {
       >
         <nav className="flex items-center justify-between max-w-6xl mx-auto py-4">
           <Link href="/" className="text-2xl font-bold">
-            <Image src="/images/logo.webp" alt="Sanctuary Logo" width={80} height={40} />
+            <Image src="/images/logo.webp" alt="Sanctuary Logo" width={50} height={50} style={{width: "auto"}}/>
           </Link>
           <div className="hidden md:flex space-x-6">
             <Link
@@ -157,13 +174,23 @@ export default function SanctuaryHome() {
               Pricing
             </Link>
           </div>
-          <Link href="/login" className="hidden md:block">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-white hover:text-green-700 transition duration-300"
-            >
-              Try It Now
-            </button>
-          </Link>
+          {!isLoading && (
+            <div className="hidden md:block">
+              {session ? (
+                <Link href="/player">
+                  <button className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-white hover:text-green-700 transition duration-300">
+                    Go To Player
+                  </button>
+                </Link>
+              ) : (
+                <Link href="/signup">
+                  <button className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-white hover:text-green-700 transition duration-300">
+                    Try It Now
+                  </button>
+                </Link>
+              )}
+            </div>
+          )}
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-current">
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -188,13 +215,20 @@ export default function SanctuaryHome() {
             <Link href="#" onClick={() => show("pricing")} className="block py-2">
               Pricing
             </Link>
-            <Link href="/login">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-white hover:text-green-700 transition duration-300"
-            >
-              Try It Now
-            </button>
-          </Link>
+            {!isLoading &&
+              (session ? (
+                <Link href="/player">
+                  <button className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-white hover:text-green-700 transition duration-300 w-full mt-2">
+                    Go To Player
+                  </button>
+                </Link>
+              ) : (
+                <Link href="/signup">
+                  <button className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-white hover:text-green-700 transition duration-300 w-full mt-2">
+                    Try It Now
+                  </button>
+                </Link>
+              ))}
           </div>
         )}
       </header>
@@ -210,8 +244,8 @@ export default function SanctuaryHome() {
                 <Image
                   src={slide.image || "/placeholder.svg"}
                   alt={`Slide ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  style={{ objectFit: "cover" }}
                   priority
                 />
                 <div className="" />
@@ -224,14 +258,16 @@ export default function SanctuaryHome() {
                       <span className="text-3xl md:text-5xl font-semibold text-green-400">{slide.subtitle}</span>
                     </h1>
                     <p className="mb-8 text-base md:text-lg">{slide.content}</p>
-                    <Link href="/login">
-                      <button
-                        onClick={openModal}
-                        className="bg-white text-green-900 px-6 py-2 md:px-8 md:py-3 rounded-full text-base md:text-lg font-semibold hover:bg-opacity-90 transition duration-300"
-                      >
-                        Get Started
-                      </button>
-                    </Link>
+                    {!isLoading && !session && (
+                      <Link href="/signup">
+                        <button
+                          onClick={openModal}
+                          className="bg-white text-green-900 px-6 py-2 md:px-8 md:py-3 rounded-full text-base md:text-lg font-semibold hover:bg-opacity-90 transition duration-300"
+                        >
+                          Get Started
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
@@ -277,8 +313,8 @@ export default function SanctuaryHome() {
                   <Image
                     src="/images/relax.jpg"
                     alt="Relaxing scene"
-                    layout="fill"
-                    objectFit="cover"
+                    fill
+                    style={{ objectFit: "cover" }}
                     className="rounded-3xl object-center object-cover absolute inset-0"
                   />
 
@@ -331,69 +367,49 @@ export default function SanctuaryHome() {
           </section>
         </div>
         <div id="how-it-works" className="page" style={{ display: "none" }}>
-          <section className="relative flex-grow mx-auto px-8 py-12 pt-15 bg-[#edf2f7] min-h-screen">
-            <div className="absolute top-0 left-0 w-full h-[15vh]">
-              <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#edf2f7] to-transparent"></div>
-            </div>
+        <section className="relative flex-grow mx-auto px-8 py-12 pt-15 bg-[#edf2f7] min-h-screen">
+      <div className="absolute top-0 left-0 w-full h-[15vh]">
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#edf2f7] to-transparent"></div>
+      </div>
 
-            <div className="relative pt-28 mx-auto max-w-7xl">
-              <h1 className="text-4xl md:text-6xl font-bold text-center mb-16 md:mb-24 bg-clip-text text-green-500">
-                How It Works
-              </h1>
+      <div className="relative pt-28 mx-auto max-w-7xl">
+        <h1 className="text-4xl md:text-6xl font-bold text-center mb-16 md:mb-24 bg-clip-text text-green-500">
+          How It Works
+        </h1>
 
-              <div className="grid gap-8 md:gap-14 md:grid-cols-2 lg:grid-cols-3 mb-24">
-                <div className="text-left flex flex-col items-start">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-b from-green-500 to-blue-500 text-white rounded-full flex items-center justify-center mb-6 text-xl font-bold">
-                    <Heart size={28} />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-semibold mb-2">Sign Up</h2>
-                  <p className="text-gray-700">
-                    Create an account with us to personalize your experience and unlock exclusive features.
-                  </p>
-                </div>
+        <div className="grid gap-8 md:gap-14 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-24">
+          <StepItem
+            icon={<Heart size={28} />}
+            title="Sign Up"
+            description="Create an account with us to personalize your experience and unlock exclusive features."
+          />
 
-                <div className="text-left flex flex-col items-start">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-b from-green-500 to-blue-500 text-white rounded-full flex items-center justify-center mb-6 text-xl font-bold">
-                    <Users size={28} />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-semibold mb-2">Track Your Mood</h2>
-                  <p className="text-gray-700">
-                    Answer a short questionnaire to track your mood over the past week and see your emotional trends.
-                  </p>
-                </div>
+          <StepItem
+            icon={<Users size={28} />}
+            title="Track Your Mood"
+            description="Answer a short questionnaire to track your mood over the past week and see your emotional trends."
+          />
 
-                <div className="text-left flex flex-col items-start">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-b from-green-500 to-blue-500 text-white rounded-full flex items-center justify-center mb-6 text-xl font-bold">
-                    <Music size={28} />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-semibold mb-2">Listen to Music</h2>
-                  <p className="text-gray-700">
-                    Use our music player to listen to curated soundscapes and genres, recommended based on your mood.
-                  </p>
-                </div>
+          <StepItem
+            icon={<Music size={28} />}
+            title="Listen to Music"
+            description="Use our music player to listen to curated soundscapes and genres, recommended based on your mood."
+          />
 
-                <div className="text-left flex flex-col items-start mt-8 md:mt-12">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-b from-green-500 to-blue-500 text-white rounded-full flex items-center justify-center mb-6 text-xl font-bold">
-                    <Sun size={28} />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-semibold mb-2">Get Personalized Recommendations</h2>
-                  <p className="text-gray-700">
-                    Receive tips and music suggestions tailored to your current emotional state to help you feel better.
-                  </p>
-                </div>
+          <StepItem
+            icon={<Sun size={28} />}
+            title="Get Personalized Recommendations"
+            description="Receive tips and music suggestions tailored to your current emotional state to help you feel better."
+          />
 
-                <div className="text-left flex flex-col items-start mt-8 md:mt-12">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-b from-green-500 to-blue-500 text-white rounded-full flex items-center justify-center mb-6 text-xl font-bold">
-                    <Sun size={28} />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-semibold mb-2">Customize Your Experience</h2>
-                  <p className="text-gray-700">
-                    Change the app's theme to your preferred style and create a soothing environment that works for you.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          <StepItem
+            icon={<Sun size={28} />}
+            title="Customize Your Experience"
+            description="Change the app's theme to your preferred style and create a soothing environment that works for you."
+          />
+        </div>
+      </div>
+    </section>
         </div>
         <div id="partners" className="page" style={{ display: "none" }}>
           <section id="partners" className="bg-[#edf2f7] text-gray-800 py-16 min-h-screen relative">
@@ -687,7 +703,7 @@ export default function SanctuaryHome() {
                     <li>🚫 Completely ad-free.</li>
                   </ul>
                   <p className="mb-6">Start your relaxation journey at no cost!</p>
-                  <Link href="/login">
+                  <Link href="/signup">
                     <button className="w-full bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition duration-300">
                       Get Started
                     </button>
@@ -846,6 +862,24 @@ export default function SanctuaryHome() {
         </div>
       </footer>
       <Script src="../lib/window.js" strategy="afterInteractive" />
+    </div>
+  )
+}
+
+interface StepItemProps {
+  icon: React.ReactNode
+  title: string
+  description: string
+}
+
+function StepItem({ icon, title, description }: StepItemProps) {
+  return (
+    <div className="flex flex-col items-center md:items-start text-center md:text-left">
+      <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-b from-green-500 to-blue-500 text-white rounded-full flex items-center justify-center mb-6 text-xl font-bold">
+        {icon}
+      </div>
+      <h2 className="text-xl md:text-2xl font-semibold mb-2">{title}</h2>
+      <p className="text-gray-700">{description}</p>
     </div>
   )
 }

@@ -13,7 +13,7 @@ const SeeMoreParagraph: React.FC<SeeMoreParagraphProps> = ({ text, maxlength }) 
   };
 
   return (
-    <div>
+    <div className='text-center md:text-left'>
       <p>
         {isExpanded ? text : `${text.substring(0, maxlength)}...`}
       </p>

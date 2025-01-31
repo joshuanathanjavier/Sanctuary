@@ -48,6 +48,7 @@ export default function ForgotPassword() {
               height={40}
               className="object-contain"
               objectFit="cover"
+              priority
             />
           </Link>
         </div>
