@@ -175,6 +175,8 @@ export default function EnhancedMusicPlayer() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isLoadingLikedSongs, setIsLoadingLikedSongs] = useState(true)
   const [currentTab, setCurrentTab] = useState<"allSongs" | "playlist" | "recommended">("allSongs")
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [detectedMetadata, setDetectedMetadata] = useState<{ title: string; artist: string } | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const router = useRouter()
 
@@ -343,8 +345,17 @@ export default function EnhancedMusicPlayer() {
     if (currentSong && !isLoading) {
       if (isPlaying) {
         audioRef.current?.pause()
+        setIsAudioPlaying(false)
       } else {
-        audioRef.current?.play()
+        audioRef.current
+          ?.play()
+          .then(() => {
+            setIsAudioPlaying(true)
+          })
+          .catch((error) => {
+            console.error("Error playing audio:", error)
+            setIsAudioPlaying(false)
+          })
       }
       setIsPlaying(!isPlaying)
     } else if (currentTracks.length > 0 && !isLoading) {
@@ -377,13 +388,36 @@ export default function EnhancedMusicPlayer() {
       audioRef.current.load()
       audioRef.current.oncanplaythrough = () => {
         setIsLoading(false)
-        audioRef.current?.play()
-        setIsPlaying(true)
+        audioRef.current
+          ?.play()
+          .then(() => {
+            setIsAudioPlaying(true)
+            setIsPlaying(true)
+
+            // Attempt to detect metadata
+            if ("mediaSession" in navigator) {
+              navigator.mediaSession.metadata = new MediaMetadata({
+                title: track.title,
+                artist: track.artist,
+              })
+              setDetectedMetadata({ title: track.title, artist: track.artist })
+            } else {
+              setDetectedMetadata(null)
+            }
+          })
+          .catch((error) => {
+            console.error("Error playing audio:", error)
+            setIsAudioPlaying(false)
+            setIsPlaying(false)
+            setDetectedMetadata(null)
+          })
       }
       audioRef.current.onerror = () => {
         setIsLoading(false)
         setIsPlaying(false)
+        setIsAudioPlaying(false)
         setShowErrorModal(true)
+        setDetectedMetadata(null)
       }
     }
   }
@@ -654,6 +688,19 @@ export default function EnhancedMusicPlayer() {
 
   const theme = themes[currentTheme]
 
+  useEffect(() => {
+    if (audioRef.current) {
+      const handleEnded = () => {
+        setIsAudioPlaying(false)
+        playNextSong()
+      }
+      audioRef.current.addEventListener("ended", handleEnded)
+      return () => {
+        audioRef.current?.removeEventListener("ended", handleEnded)
+      }
+    }
+  }, [currentSong])
+
   return (
     <div className={`h-screen flex flex-col ${theme.background} ${theme.text} relative overflow-hidden`}>
       <AnimatedBackground theme={currentTheme} />
@@ -665,14 +712,14 @@ export default function EnhancedMusicPlayer() {
         >
           <div className="m-auto">
             <Link href="/">
-            <Image
-              src="/images/logo-with-text-logo.webp"
-              alt="Logo"
-              width={150}
-              height={40}
-              style={{ objectFit: "cover", width: 150, height: 40 }}
-              priority
-            />
+              <Image
+                src="/images/logo-with-text-logo.webp"
+                alt="Logo"
+                width={150}
+                height={40}
+                style={{ objectFit: "cover", width: 150, height: 40 }}
+                priority
+              />
             </Link>
           </div>
           <div className="flex items-center gap-4">
@@ -811,7 +858,7 @@ export default function EnhancedMusicPlayer() {
             <Dialog>
               <DialogTrigger asChild>
                 <button id="settings-dialog-trigger" className="hidden">
-                  Settings
+                  Settings{" "}
                 </button>
               </DialogTrigger>
               <DialogContent className={`${theme.background} ${theme.text} w-[90vw] max-w-2xl`}>
@@ -1118,10 +1165,10 @@ export default function EnhancedMusicPlayer() {
                     <p
                       className={`font-medium ${contentDensity === "compact" ? "text-xs md:text-sm" : "text-sm md:text-base"}`}
                     >
-                      {currentSong.title}
+                      {detectedMetadata ? detectedMetadata.title : currentSong.title}
                     </p>
                     <p className={`opacity-70 ${contentDensity === "compact" ? "text-xs" : "text-xs md:text-sm"}`}>
-                      {currentSong.artist}
+                      {detectedMetadata ? detectedMetadata.artist : currentSong.artist}
                     </p>
                   </div>
                 </div>
